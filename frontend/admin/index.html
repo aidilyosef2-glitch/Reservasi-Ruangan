@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Center Admin - Reservasi Gedung Polinela</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo" style="background: linear-gradient(135deg, #ef4444, #f59e0b);">A</div>
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="index.html" class="sidebar-link active">
+                        <i class="fas fa-chart-pie"></i> Command Center
+                    </a>
+                </li>
+                <li>
+                    <a href="kelola_reservasi.html" class="sidebar-link">
+                        <i class="fas fa-tasks"></i> Approval Reservasi
+                    </a>
+                </li>
+                <li>
+                    <a href="kelola_gedung.html" class="sidebar-link">
+                        <i class="fas fa-building"></i> Master Gedung
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="d-flex align-center gap-2">
+                    <h2>Command Center Admin</h2>
+                </div>
+                
+                <div class="user-profile">
+                    <a href="../assets/RND_Aidil_Yosef.pdf" download class="btn btn-outline" title="Unduh Dokumen RND">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> Unduh RND
+                    </a>
+                    <div class="text-right">
+                        <h4 id="userName">Admin Name</h4>
+                        <span class="text-muted" style="font-size: 0.8rem;" id="userRole">Administrator</span>
+                    </div>
+                    <div class="avatar" id="userAvatar" style="background: #ef4444;">A</div>
+                    <button class="btn btn-outline" onclick="logout()" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card glass-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Total Reservasi (Global)</h4>
+                        <h2 id="stat-total">0</h2>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Pending (Butuh Aksi)</h4>
+                        <h2 id="stat-pending">0</h2>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Total Gedung</h4>
+                        <h2 id="stat-gedung">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Reservations -->
+            <div class="glass-card mt-4">
+                <div class="d-flex justify-between align-center mb-4">
+                    <h3>Antrean Persetujuan Terbaru</h3>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Pemohon</th>
+                                <th>Gedung</th>
+                                <th>Kegiatan</th>
+                                <th>Waktu</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Approval (Sederhana) -->
+    <div id="approvalModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="glass-card" style="width: 400px; max-width: 90%;">
+            <h3>Tindak Lanjuti Reservasi</h3>
+            <div class="form-group mt-3">
+                <label class="form-label">Catatan Admin</label>
+                <textarea id="catatanReviewer" class="form-control" rows="3" placeholder="Alasan disetujui/ditolak"></textarea>
+            </div>
+            <input type="hidden" id="selectedResId">
+            <div class="d-flex gap-2 justify-between mt-4">
+                <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger" onclick="processApproval('rejected')">Tolak</button>
+                    <button class="btn btn-success" onclick="processApproval('approved')">Setujui</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if(!user) return;
+
+            if(user.role !== 'superadmin' && user.role !== 'admin_gedung') {
+                window.location.href = '../pemohon/index.html'; // Redirect if pemohon
+            }
+
+            document.getElementById('userName').textContent = user.nama;
+            document.getElementById('userAvatar').textContent = user.nama.charAt(0).toUpperCase();
+
+            loadDashboardSummary();
+            loadAllReservations();
+        });
+
+        async function loadDashboardSummary() {
+            const res = await apiFetch('/dashboard/summary');
+            if(res.status === 'success') {
+                document.getElementById('stat-total').textContent = res.data.total_reservasi;
+                document.getElementById('stat-pending').textContent = res.data.reservasi_pending;
+                document.getElementById('stat-gedung').textContent = res.data.total_gedung;
+            }
+        }
+
+        async function loadAllReservations() {
+            const res = await apiFetch('/reservasi');
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if(res.status === 'success' && res.data.length > 0) {
+                // Filter hanya yang pending untuk command center ringkas
+                const pendings = res.data.filter(item => item.status === 'pending');
+                
+                if(pendings.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Tidak ada reservasi yang menunggu persetujuan. Hore!</td></tr>`;
+                    return;
+                }
+
+                pendings.slice(0, 5).forEach(item => { // Tampilkan 5 terbaru
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${item.nama_pemohon}</strong></td>
+                        <td>${item.nama_gedung}</td>
+                        <td>${item.jenis_kegiatan}</td>
+                        <td>
+                            <div style="font-size:0.85rem">
+                                ${new Date(item.waktu_mulai).toLocaleString('id-ID')}
+                            </div>
+                        </td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td>
+                            <button class="btn btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="openModal(${item.id})">Review</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Belum ada data reservasi.</td></tr>`;
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById('selectedResId').value = id;
+            document.getElementById('catatanReviewer').value = '';
+            document.getElementById('approvalModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('approvalModal').style.display = 'none';
+        }
+
+        async function processApproval(status) {
+            const id = document.getElementById('selectedResId').value;
+            const catatan = document.getElementById('catatanReviewer').value;
+            
+            const res = await apiFetch(`/reservasi/${id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status, catatan })
+            });
+
+            if(res.status === 'success') {
+                showToast(res.message, 'success');
+                closeModal();
+                loadDashboardSummary();
+                loadAllReservations();
+            } else {
+                showToast(res.message, 'danger');
+            }
+        }
+    </script>
+</body>
+</html>

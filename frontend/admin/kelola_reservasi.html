@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Reservasi - Admin Polinela</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo" style="background: linear-gradient(135deg, #ef4444, #f59e0b);">A</div>
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html" class="sidebar-link"><i class="fas fa-chart-pie"></i> Command Center</a></li>
+                <li><a href="kelola_reservasi.html" class="sidebar-link active"><i class="fas fa-tasks"></i> Approval Reservasi</a></li>
+                <li><a href="kelola_gedung.html" class="sidebar-link"><i class="fas fa-building"></i> Master Gedung</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h2>Manajemen Seluruh Reservasi</h2>
+            </header>
+
+            <div class="glass-card mt-4">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Pemohon</th>
+                                <th>Gedung</th>
+                                <th>Kegiatan</th>
+                                <th>Waktu</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Approval -->
+    <div id="approvalModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="glass-card" style="width: 400px; max-width: 90%;">
+            <h3>Tindak Lanjuti Reservasi</h3>
+            <div class="form-group mt-3">
+                <label class="form-label">Catatan Admin</label>
+                <textarea id="catatanReviewer" class="form-control" rows="3" placeholder="Alasan disetujui/ditolak"></textarea>
+            </div>
+            <input type="hidden" id="selectedResId">
+            <div class="d-flex gap-2 justify-between mt-4">
+                <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger" onclick="processApproval('rejected')">Tolak</button>
+                    <button class="btn btn-success" onclick="processApproval('approved')">Setujui</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if(!user || (user.role !== 'superadmin' && user.role !== 'admin_gedung')) {
+                window.location.href = '../login.html';
+                return;
+            }
+            loadAllReservations();
+        });
+
+        async function loadAllReservations() {
+            const res = await apiFetch('/reservasi');
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if(res.status === 'success' && res.data.length > 0) {
+                res.data.forEach(item => {
+                    let badgeClass = 'badge-pending';
+                    let statusText = 'Pending';
+                    if(item.status === 'approved') { badgeClass = 'badge-approved'; statusText = 'Disetujui'; }
+                    if(item.status === 'rejected') { badgeClass = 'badge-rejected'; statusText = 'Ditolak'; }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${item.nama_pemohon}</strong></td>
+                        <td>${item.nama_gedung}</td>
+                        <td>${item.jenis_kegiatan}</td>
+                        <td><div style="font-size:0.85rem">${new Date(item.waktu_mulai).toLocaleString('id-ID')}</div></td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                        <td>
+                            ${item.status === 'pending' ? `<button class="btn btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="openModal(${item.id})">Review</button>` : `<button class="btn btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" disabled>Reviewed</button>`}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Belum ada data reservasi.</td></tr>`;
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById('selectedResId').value = id;
+            document.getElementById('catatanReviewer').value = '';
+            document.getElementById('approvalModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('approvalModal').style.display = 'none';
+        }
+
+        async function processApproval(status) {
+            const id = document.getElementById('selectedResId').value;
+            const catatan = document.getElementById('catatanReviewer').value;
+            const res = await apiFetch(`/reservasi/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, catatan }) });
+            if(res.status === 'success') { showToast(res.message, 'success'); closeModal(); loadAllReservations(); } 
+            else { showToast(res.message, 'danger'); }
+        }
+    </script>
+</body>
+</html>

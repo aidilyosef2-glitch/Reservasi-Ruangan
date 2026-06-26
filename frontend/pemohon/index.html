@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pemohon - Reservasi Gedung Polinela</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Polinela</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="index.html" class="sidebar-link active">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="buat_reservasi.html" class="sidebar-link">
+                        <i class="fas fa-calendar-plus"></i> Buat Reservasi
+                    </a>
+                </li>
+                <li>
+                    <a href="katalog_gedung.html" class="sidebar-link">
+                        <i class="fas fa-building"></i> Katalog Gedung
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="d-flex align-center gap-2">
+                    <button class="btn btn-outline d-md-none" id="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2>Dashboard Pemohon</h2>
+                </div>
+                
+                <div class="user-profile">
+                    <a href="../assets/RND_Aidil_Yosef.pdf" download class="btn btn-outline" title="Unduh Dokumen RND">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> Unduh RND
+                    </a>
+                    <div class="text-right">
+                        <h4 id="userName">User Name</h4>
+                        <span class="text-muted" style="font-size: 0.8rem;">Pemohon</span>
+                    </div>
+                    <div class="avatar" id="userAvatar">U</div>
+                    <button class="btn btn-outline" onclick="logout()" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card glass-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-list-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Total Reservasi Anda</h4>
+                        <h2 id="stat-total">0</h2>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Menunggu Persetujuan</h4>
+                        <h2 id="stat-pending">0</h2>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Disetujui</h4>
+                        <h2 id="stat-approved">0</h2>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Ditolak</h4>
+                        <h2 id="stat-rejected">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass-card mt-4">
+                <div class="d-flex justify-between align-center mb-4">
+                    <h3>Riwayat Reservasi Terbaru</h3>
+                    <a href="buat_reservasi.html" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Reservasi Baru
+                    </a>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Gedung</th>
+                                <th>Kegiatan</th>
+                                <th>Waktu Pelaksanaan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if(!user) return; // Jika gagal auth, biarkan fungsi checkAuth() yang me-redirect
+
+            if(user.role !== 'pemohon') {
+                window.location.href = '../admin/index.html'; // Redirect if admin
+            }
+
+            document.getElementById('userName').textContent = user.nama;
+            document.getElementById('userAvatar').textContent = user.nama.charAt(0).toUpperCase();
+
+            loadDashboardSummary();
+            loadRecentReservations();
+        });
+
+        async function loadDashboardSummary() {
+            const res = await apiFetch('/dashboard/summary');
+            if(res.status === 'success') {
+                document.getElementById('stat-total').textContent = res.data.total_reservasi;
+                document.getElementById('stat-pending').textContent = res.data.reservasi_pending;
+                document.getElementById('stat-approved').textContent = res.data.reservasi_approved;
+                document.getElementById('stat-rejected').textContent = res.data.reservasi_rejected;
+            }
+        }
+
+        async function loadRecentReservations() {
+            const res = await apiFetch('/reservasi');
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if(res.status === 'success' && res.data.length > 0) {
+                res.data.forEach(item => {
+                    let badgeClass = 'badge-pending';
+                    let statusText = 'Pending';
+                    if(item.status === 'approved') { badgeClass = 'badge-approved'; statusText = 'Disetujui'; }
+                    if(item.status === 'rejected') { badgeClass = 'badge-rejected'; statusText = 'Ditolak'; }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${item.kode_reservasi}</strong></td>
+                        <td>${item.nama_gedung}</td>
+                        <td>${item.jenis_kegiatan}</td>
+                        <td>
+                            <div style="font-size:0.85rem">
+                                <i class="far fa-calendar-alt text-primary"></i> ${new Date(item.waktu_mulai).toLocaleString('id-ID')}
+                            </div>
+                        </td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="alert('Detail catatan: ${item.catatan_reviewer || '-'}')">Detail</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Belum ada riwayat reservasi.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>
