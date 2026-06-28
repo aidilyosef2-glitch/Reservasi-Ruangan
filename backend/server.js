@@ -34,7 +34,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/laporan', laporanRoutes);
 
 // Server Listen
-app.listen(PORT, () => {
-    console.log(`✅ Backend API Server running...`);
-    console.log(`🌐 Buka Website Reservasi disini: http://localhost:${PORT}/login.html`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Backend API Server running on port ${PORT}`);
 });
