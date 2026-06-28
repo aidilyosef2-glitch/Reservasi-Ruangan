@@ -24,12 +24,14 @@ const authRoutes = require('./routes/authRoutes');
 const gedungRoutes = require('./routes/gedungRoutes');
 const reservasiRoutes = require('./routes/reservasiRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const laporanRoutes = require('./routes/laporanRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/gedung', gedungRoutes);
 app.use('/api/reservasi', reservasiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/laporan', laporanRoutes);
 
 // Server Listen
 app.listen(PORT, () => {

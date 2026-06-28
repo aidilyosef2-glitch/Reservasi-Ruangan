@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Saya - Reservasi Gedung Polinela</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        /* ===== Laporan Page Specific Styles ===== */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        .chart-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+        .chart-card h4 {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .chart-card h4 i {
+            color: var(--primary);
+        }
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+        .chart-card-full {
+            grid-column: 1 / -1;
+        }
+
+        /* Summary Row */
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .summary-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+        .summary-item:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-3px);
+        }
+        .summary-item .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .summary-item .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-bar label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .filter-bar input[type="month"] {
+            padding: 0.6rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        .filter-bar input[type="month"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Export Button */
+        .btn-export {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        .btn-export:hover {
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Rekap Table */
+        .rekap-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Pulse animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .loading-pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            .summary-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Polinela</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="index.html" class="sidebar-link">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="buat_reservasi.html" class="sidebar-link">
+                        <i class="fas fa-calendar-plus"></i> Buat Reservasi
+                    </a>
+                </li>
+                <li>
+                    <a href="katalog_gedung.html" class="sidebar-link">
+                        <i class="fas fa-building"></i> Katalog Gedung
+                    </a>
+                </li>
+                <li>
+                    <a href="laporan.html" class="sidebar-link active">
+                        <i class="fas fa-chart-bar"></i> Laporan Saya
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="d-flex align-center gap-2">
+                    <button class="btn btn-outline d-md-none" id="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2><i class="fas fa-chart-bar" style="color: var(--primary); margin-right: 0.5rem;"></i>Laporan Saya</h2>
+                </div>
+                
+                <div class="user-profile">
+                    <div class="text-right">
+                        <h4 id="userName">User Name</h4>
+                        <span class="text-muted" style="font-size: 0.8rem;">Pemohon</span>
+                    </div>
+                    <div class="avatar" id="userAvatar">U</div>
+                    <button class="btn btn-outline" onclick="logout()" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Summary Cards -->
+            <div class="summary-row" id="summaryRow">
+                <div class="summary-item">
+                    <div class="summary-value" id="sum-total">—</div>
+                    <div class="summary-label">Total Reservasi</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sum-approved">—</div>
+                    <div class="summary-label">Disetujui</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sum-rejected">—</div>
+                    <div class="summary-label">Ditolak</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sum-pending">—</div>
+                    <div class="summary-label">Pending</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-grid">
+                <!-- Monthly Trend Chart -->
+                <div class="chart-card">
+                    <h4><i class="fas fa-chart-line"></i> Tren Reservasi Saya (Bulanan)</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Status Distribution Pie -->
+                <div class="chart-card">
+                    <h4><i class="fas fa-chart-pie"></i> Distribusi Status</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rekap Detail -->
+            <div class="rekap-section">
+                <div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: 1rem;">
+                    <h3><i class="fas fa-table" style="color: var(--primary); margin-right: 0.5rem;"></i>Riwayat Lengkap</h3>
+                    <div class="filter-bar" style="margin-bottom: 0;">
+                        <label for="filterBulan"><i class="fas fa-filter"></i> Filter:</label>
+                        <input type="month" id="filterBulan" onchange="loadRekapDetail()">
+                        <button class="btn btn-outline" onclick="clearFilter()" style="padding: 0.6rem 1rem; font-size: 0.85rem;">
+                            <i class="fas fa-times"></i> Reset
+                        </button>
+                        <button class="btn btn-export" onclick="exportCSV()" style="padding: 0.6rem 1rem; font-size: 0.85rem;">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="rekapTable">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Kode</th>
+                                <th>Gedung</th>
+                                <th>Kegiatan</th>
+                                <th>Peserta</th>
+                                <th>Waktu Mulai</th>
+                                <th>Waktu Selesai</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rekapBody">
+                            <tr>
+                                <td colspan="8" class="loading-pulse">Memuat data laporan...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/js/app.js"></script>
+    <script>
+        let monthlyChart, statusChart;
+        let rekapData = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            if (user.role !== 'pemohon') {
+                window.location.href = '../admin/index.html';
+                return;
+            }
+
+            document.getElementById('userName').textContent = user.nama;
+            document.getElementById('userAvatar').textContent = user.nama.charAt(0).toUpperCase();
+
+            const toggleBtn = document.getElementById('toggleSidebar');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.toggle('show');
+                });
+            }
+
+            await Promise.all([
+                loadSummary(),
+                loadMonthlyChart(),
+                loadStatusChart(),
+                loadRekapDetail()
+            ]);
+        });
+
+        // ===== SUMMARY =====
+        async function loadSummary() {
+            const res = await apiFetch('/dashboard/summary');
+            if (res.status === 'success') {
+                animateCounter('sum-total', res.data.total_reservasi);
+                animateCounter('sum-approved', res.data.reservasi_approved);
+                animateCounter('sum-rejected', res.data.reservasi_rejected);
+                animateCounter('sum-pending', res.data.reservasi_pending);
+            }
+        }
+
+        function animateCounter(id, target) {
+            const el = document.getElementById(id);
+            const duration = 800;
+            const start = performance.now();
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(target * eased);
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        // ===== MONTHLY CHART =====
+        async function loadMonthlyChart() {
+            const res = await apiFetch('/laporan/monthly');
+            if (res.status !== 'success') return;
+
+            const data = res.data;
+            const labels = data.map(d => {
+                const [y, m] = d.bulan.split('-');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                return `${monthNames[parseInt(m) - 1]} ${y}`;
+            });
+
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+
+            monthlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Total Reservasi',
+                        data: data.map(d => d.total),
+                        borderColor: '#10b981',
+                        backgroundColor: gradient,
+                        borderWidth: 2.5,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#10b981',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', usePointStyle: true, padding: 20 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8', stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ===== STATUS PIE CHART =====
+        async function loadStatusChart() {
+            const res = await apiFetch('/laporan/status-distribution');
+            if (res.status !== 'success') return;
+
+            const data = res.data;
+            const statusColors = {
+                'pending': '#f59e0b',
+                'approved': '#10b981',
+                'rejected': '#ef4444',
+                'cancelled': '#6b7280',
+                'completed': '#3b82f6',
+                'draft': '#8b5cf6'
+            };
+            const statusLabels = {
+                'pending': 'Pending',
+                'approved': 'Disetujui',
+                'rejected': 'Ditolak',
+                'cancelled': 'Dibatalkan',
+                'completed': 'Selesai',
+                'draft': 'Draft'
+            };
+
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => statusLabels[d.status] || d.status),
+                    datasets: [{
+                        data: data.map(d => d.jumlah),
+                        backgroundColor: data.map(d => statusColors[d.status] || '#6b7280'),
+                        borderColor: 'rgba(15, 23, 42, 0.8)',
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                usePointStyle: true,
+                                padding: 16,
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ===== REKAP DETAIL =====
+        async function loadRekapDetail() {
+            const bulan = document.getElementById('filterBulan').value;
+            const queryParam = bulan ? `?bulan=${bulan}` : '';
+            const res = await apiFetch(`/laporan/rekap${queryParam}`);
+            const tbody = document.getElementById('rekapBody');
+            tbody.innerHTML = '';
+
+            if (res.status === 'success' && res.data.length > 0) {
+                rekapData = res.data;
+                res.data.forEach((item, index) => {
+                    let badgeClass = 'badge-pending';
+                    let statusText = item.status;
+                    if (item.status === 'approved') { badgeClass = 'badge-approved'; statusText = 'Disetujui'; }
+                    if (item.status === 'rejected') { badgeClass = 'badge-rejected'; statusText = 'Ditolak'; }
+                    if (item.status === 'pending') { statusText = 'Pending'; }
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'animate-fade-in';
+                    tr.style.animationDelay = `${index * 0.03}s`;
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td><strong>${item.kode_reservasi}</strong></td>
+                        <td>${item.nama_gedung}</td>
+                        <td>${item.jenis_kegiatan}</td>
+                        <td class="text-center">${item.jumlah_peserta}</td>
+                        <td style="font-size:0.85rem">${new Date(item.waktu_mulai).toLocaleString('id-ID')}</td>
+                        <td style="font-size:0.85rem">${new Date(item.waktu_selesai).toLocaleString('id-ID')}</td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                rekapData = [];
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Tidak ada data reservasi${bulan ? ' untuk bulan ini' : ''}.</td></tr>`;
+            }
+        }
+
+        function clearFilter() {
+            document.getElementById('filterBulan').value = '';
+            loadRekapDetail();
+        }
+
+        // ===== EXPORT CSV =====
+        function exportCSV() {
+            if (rekapData.length === 0) {
+                showToast('Tidak ada data untuk di-export.', 'danger');
+                return;
+            }
+
+            const headers = ['No', 'Kode Reservasi', 'Gedung', 'Kegiatan', 'Jumlah Peserta', 'Waktu Mulai', 'Waktu Selesai', 'Status'];
+            const rows = rekapData.map((item, i) => [
+                i + 1,
+                item.kode_reservasi,
+                item.nama_gedung,
+                item.jenis_kegiatan,
+                item.jumlah_peserta,
+                new Date(item.waktu_mulai).toLocaleString('id-ID'),
+                new Date(item.waktu_selesai).toLocaleString('id-ID'),
+                item.status
+            ]);
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const bulan = document.getElementById('filterBulan').value;
+            link.href = URL.createObjectURL(blob);
+            link.download = `laporan_reservasi_saya${bulan ? '_' + bulan : ''}_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('File CSV berhasil didownload!', 'success');
+        }
+    </script>
+</body>
+</html>
