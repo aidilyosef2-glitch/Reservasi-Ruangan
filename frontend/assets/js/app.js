@@ -1,6 +1,6 @@
 // frontend/assets/js/app.js
 
-const API_BASE_URL = 'reservasi-ruangan-production.up.railway.app';
+const API_BASE_URL = 'https://reservasi-ruangan-production.up.railway.app/api';
 
 // Utility for fetching data with JWT
 async function apiFetch(endpoint, options = {}) {
